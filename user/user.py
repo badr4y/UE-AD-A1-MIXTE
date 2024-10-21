@@ -3,7 +3,6 @@ from flask import Flask, render_template, request, jsonify, make_response
 import requests
 import json
 from werkzeug.exceptions import NotFound
-from google.protobuf.json_format import MessageToJson
 
 # CALLING gRPC requests
 import grpc
@@ -20,7 +19,7 @@ PORT = 3004
 HOST = '0.0.0.0'
 
 with open('{}/data/users.json'.format("."), "r") as jsf:
-   users = json.load(MessageToJson(jsf))["users"]
+   users = json.load(jsf)["users"]
 
 @app.route("/", methods=['GET'])
 def home():
@@ -36,9 +35,8 @@ def getUserInfoById(user_Id):
         return make_response(jsonify({'error': 'User not found'}), 400)
 
 
-@app.route("/users", methods=['GET'])
-def getUserSinceTime():
-    timeSinceLastActivity = request.args.get('timeSinceLastActivity')
+@app.route("/users/timeSinceLastActivity", methods=['GET'])
+def getUserSinceTime(timeSinceLastActivity):
     if timeSinceLastActivity is None:
         return make_response(jsonify({"error": "timeSinceLastActivity parameter is required"}), 400)
 
@@ -49,7 +47,7 @@ def getUserSinceTime():
 @app.route("/users/<userId>/booking", methods=['POST'])
 def createBookingForUser(userId):
     req = request.get_json()
-    date = req.get("date")
+    date = str(req.get("date"))
     movieId = req.get("movieid")
 
     # Create a gRPC channel and stub
@@ -57,11 +55,12 @@ def createBookingForUser(userId):
         stub = booking_pb2_grpc.BookingStub(channel)
 
         # Create the request message
-        booking_request = booking_pb2.BookingRequest(userid=userId, date=date, movieid=movieId)
+        booking_info = booking_pb2.MovieDateBooking(date=date, movies=[movieId])
+        booking_request = booking_pb2.AddBooking(userid=userId, bookingInfo=booking_info)
 
         # Make the gRPC call
         try:
-            booking_response = stub.CreateBooking(booking_request)
+            booking_response = stub.addBookingByUserId(booking_request)
             return make_response(jsonify(f"Reservation at date {date} for movie {movieId} made"), 200)
         except grpc.RpcError as e:
             return make_response(jsonify({'error': e.details()}), e.code().value[0])
@@ -73,35 +72,37 @@ def getMoviesInfoBookedByUser(userId):
         stub = booking_pb2_grpc.BookingStub(channel)
 
         # Create the request message
-        booking_request = booking_pb2.BookingRequest(userid=userId)
+        booking_request = booking_pb2.BookingUser(userid=userId,dates=[])
 
         # Make the gRPC call
         try:
-            userBookingResponse = stub.GetBookings(booking_request)
-            datesWithMovieId = [booking for booking in userBookingResponse.dates if "movies" in booking]
-            print(datesWithMovieId)
+            userBookingResponse = stub.getBookingByUserId(booking_request)
+            datesWithMovieId = [booking for booking in userBookingResponse.dates if booking.movies]
+            #print(datesWithMovieId)
             moviesIds = {(movieId, movieList.date)
                         for movieList in datesWithMovieId
                         for movieId in movieList.movies}
-            print(moviesIds)
+            #print(moviesIds)
             listInfoMovies = []
             for movieId in moviesIds:
                 query = f"""
-                {{
-                    movie(id: "{movieId[0]}") {{
-                        id
-                        title
-                        description
-                        releaseDate
-                    }}
-                }}
+                                {{
+                                    movie_with_id(_id: "{movieId[0]}") {{
+                                        id
+                                        title
+                                        director
+                                        rating
+                                    }}
+                                }}
                 """
-                movieResponse = requests.post("http://movie:3200/graphql", json={'query': query})
+                movieResponse = requests.post("http://localhost:3001/graphql", json={'query': query})
                 if movieResponse.status_code == 200:
-                    movie_info = dict()
-                    movie_info['filmInfo'] = movieResponse.json()
-                    movie_info['BookingDate'] = movieId[1]  # Append booking date to the movie info
-
+                    movie_data = movieResponse.json().get('data', {}).get('movie_with_id', {})
+                    if movie_data:
+                        movie_info = {
+                            'BookingDate': movieId[1],
+                            'filmInfo': movie_data
+                        }
                     listInfoMovies.append(movie_info)
             # Check if we found movie information
             if len(listInfoMovies) > 0:
