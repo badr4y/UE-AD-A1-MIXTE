@@ -24,13 +24,18 @@ with open('{}/data/users.json'.format("."), "r") as jsf:
 def home():
    return "<h1 style='color:blue'>Welcome to the User service!</h1>"
 
+@app.route("/users", methods=['GET'])
+def get_users():
+    # Endpoint to retrieve all bookings
+    res = make_response(jsonify(users), 200)  # Create a response with the bookings data
+    return res
 # Endpoint to get user information by user ID
 @app.route("/users/<user_Id>", methods=['GET'])
 def getUserInfoById(user_Id):
     # Filter the users list to find a matching user by ID
     user = list(filter(lambda x: x['id'] == user_Id, users))
     if user:  # If a user is found, return the user info as a JSON response
-        return make_response(jsonify(user[0]), 200)
+        return make_response(jsonify(user[0]), 200) 
     else:
         # If no user is found, return an error response with a 400 status code
         return make_response(jsonify({'error': 'User not found'}), 400)
@@ -50,15 +55,16 @@ def getUserSinceTime(timeSinceLastActivity):
 def deleteBookingForUser(userId):
     req = request.get_json()  # Get the JSON request body
     date = req.get("date")
-    moviesid = req.get("moviesid")
-    print(date,moviesid)
+    moviesid = str(req.get("movieid"))
+
     if not date or not moviesid:
         return make_response(jsonify({'error': 'Date and movieid parameters are required'}), 400)
 
     with grpc.insecure_channel('localhost:3003') as channel:
         stub = booking_pb2_grpc.BookingStub(channel)
-        # Create the gRPC request message
+        # Create the gRPC request mes       sage
         delete_request = booking_pb2.DeleteBookingRequest(userid=userId, date=date, moviesid=moviesid)
+
         try:
             delete_response = stub.deleteBooking(delete_request)
             if delete_response.success:
@@ -74,9 +80,9 @@ def deleteBookingForUser(userId):
 @app.route("/users/<userId>/booking", methods=['POST'])
 def createBookingForUser(userId):
     req = request.get_json()  # Get booking details from the request payload
+    
     date = str(req.get("date"))
     movieId = req.get("movieid")
-
     # Create a gRPC channel and stub to communicate with the Booking service
     with grpc.insecure_channel('localhost:3003') as channel:
         stub = booking_pb2_grpc.BookingStub(channel)
@@ -84,7 +90,6 @@ def createBookingForUser(userId):
         # Create the gRPC request message with booking information
         booking_info = booking_pb2.MovieDateBooking(date=date, movies=[movieId])
         booking_request = booking_pb2.AddBooking(userid=userId, bookingInfo=booking_info)
-
         # Make the gRPC call to the Booking service
         try:
             booking_response = stub.addBookingByUserId(booking_request)
@@ -103,18 +108,16 @@ def getMoviesInfoBookedByUser(userId):
 
         # Create the request message to get user bookings
         booking_request = booking_pb2.BookingUser(userid=userId, dates=[])
-
         try:
             # Make gRPC call to retrieve booking data
+        
             userBookingResponse = stub.getBookingByUserId(booking_request)
             # Filter bookings with movies
-            datesWithMovieId = [booking for booking in userBookingResponse.dates if booking.movies]
-
+            datesWithMovieId = [booking for booking in userBookingResponse.dates if hasattr(booking, 'movies') and booking.movies]
             # Extract movie IDs and booking dates from the response
             moviesIds = {(movieId, movieList.date)
                          for movieList in datesWithMovieId
                          for movieId in movieList.movies}
-            
             listInfoMovies = []
             # Iterate over the movie IDs and fetch movie details using GraphQL
             for movieId in moviesIds:

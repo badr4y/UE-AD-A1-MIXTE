@@ -14,7 +14,7 @@ message AddBooking{
 
 message MovieDateBooking {
     string date = 1;
-    repeated string moviesid = 2;
+    repeated string movies = 2;
 }
 
 message NewUserId{

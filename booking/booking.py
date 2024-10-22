@@ -14,13 +14,20 @@ class BookingServicer(booking_pb2_grpc.BookingServicer):
 
 
     def getBookingByUserId(self, request, context):
+        # Log the incoming request for debugging
+        print(f"Received request for user ID: {request.userid}")
+
         for booking in self.db:
             if booking['userid'] == request.userid:
-                print("user Found!")
-                # Return the showtime data if the date matches
-                return booking_pb2.BookingUser(userid= booking['userid'], dates=booking['dates'])     
-        return booking_pb2.BookingUser(userid='', dates=[])
-    
+                print("User found, returning booking data.")
+                return booking_pb2.BookingUser(userid=booking['userid'], dates=[
+                    booking_pb2.MovieDateBooking(
+                        date=date['date'],
+                        movies=date['movies']
+                    ) for date in booking['dates']
+                ])
+        print("User not found, returning empty response.")
+        
     def deleteBooking(self, request, context):
         userid = request.userid
         date = request.date
@@ -28,7 +35,7 @@ class BookingServicer(booking_pb2_grpc.BookingServicer):
         # Search for the user's booking
         user_booking = next((booking for booking in self.db if booking["userid"] == userid), None)
 
-        if not user_booking:
+        if not user_booking:    
             return booking_pb2.DeleteBookingResponse(success=False, message="User booking not found")
 
         # Find the user's dates

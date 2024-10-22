@@ -13,10 +13,10 @@ class ShowtimeServicer(showtime_pb2_grpc.ShowtimeServicer):
         # Loading the showtime schedule from a JSON file
         with open('{}/data/times.json'.format("."), "r") as jsf:
             self.db = json.load(jsf)["schedule"]  # Load the schedule data
-            self.db = json.load(jsf)["schedule"]  # Avoid duplicate loading (remove if intentional)
 
     # Method to retrieve movies by a given date
     def getMoviesByDate(self, request, context):
+        print('ici')
         # Loop through the schedule to find matching showtimes by date
         for showtime in self.db:
             if showtime['date'] == request.date:  # Check if the requested date matches
