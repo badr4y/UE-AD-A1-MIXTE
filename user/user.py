@@ -3,7 +3,6 @@ from flask import Flask, render_template, request, jsonify, make_response
 import requests
 import json
 from werkzeug.exceptions import NotFound
-from google.protobuf.json_format import MessageToJson
 
 # CALLING gRPC requests
 import grpc
@@ -20,7 +19,7 @@ PORT = 3004
 HOST = '0.0.0.0'
 
 with open('{}/data/users.json'.format("."), "r") as jsf:
-   users = json.load(MessageToJson(jsf))["users"]
+   users = json.load(jsf)["users"]
 
 @app.route("/", methods=['GET'])
 def home():
@@ -36,13 +35,12 @@ def getUserInfoById(user_Id):
         return make_response(jsonify({'error': 'User not found'}), 400)
 
 
-@app.route("/users", methods=['GET'])
-def getUserSinceTime():
-    timeSinceLastActivity = request.args.get('timeSinceLastActivity')
-    if timeSinceLastActivity is None:
+@app.route("/users/time/<timeSinceLast>", methods=['GET'])
+def getUserSinceTime(timeSinceLast):
+    if timeSinceLast is None:
         return make_response(jsonify({"error": "timeSinceLastActivity parameter is required"}), 400)
 
-    userArray = list(filter(lambda x: x['last_active'] > int(timeSinceLastActivity), users))
+    userArray = list(filter(lambda x: x['last_active'] > int(timeSinceLast), users))
     return make_response(jsonify(userArray), 200)
 
 

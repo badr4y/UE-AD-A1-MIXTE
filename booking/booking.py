@@ -1,12 +1,11 @@
 import grpc
 from concurrent import futures
-
 import booking_pb2
 import booking_pb2_grpc
 import showtime_pb2
 import showtime_pb2_grpc
 import json
-from google.protobuf.json_format import MessageToJson
+from flask import jsonify
 class BookingServicer(booking_pb2_grpc.BookingServicer):
 
     def __init__(self):
@@ -15,7 +14,6 @@ class BookingServicer(booking_pb2_grpc.BookingServicer):
 
 
     def getBookingByUserId(self, request, context):
-        print((MessageToJson(request)))
         for booking in self.db:
             if booking['userid'] == request.userid:
                 print("user Found!")
