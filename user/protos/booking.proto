@@ -3,7 +3,9 @@ syntax = "proto3";
 service Booking{
     rpc getBookingByUserId(BookingUser) returns (BookingUser);
     rpc addBookingByUserId(AddBooking) returns (BookingUser);
-}
+    rpc deleteBooking(DeleteBookingRequest) returns (DeleteBookingResponse);
+
+}   
 
 message AddBooking{
     string userid= 1;
@@ -22,4 +24,16 @@ message NewUserId{
 message BookingUser {
     string userid = 1;
     repeated MovieDateBooking dates = 2; 
+}
+
+message DeleteBookingRequest {
+    string userid = 1;                   // ID of the user
+    string date = 2;                     // Date of the booking to delete
+    string moviesid = 3;          // List of movie IDs to delete (optional if you want to specify movies)
+}
+
+// Response message for deleting a booking
+message DeleteBookingResponse {
+    bool success = 1;                    // Indicates whether the deletion was successful
+    string message = 2;                  // Message providing details about the deletion
 }

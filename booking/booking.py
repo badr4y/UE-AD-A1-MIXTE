@@ -21,6 +21,44 @@ class BookingServicer(booking_pb2_grpc.BookingServicer):
                 return booking_pb2.BookingUser(userid= booking['userid'], dates=booking['dates'])     
         return booking_pb2.BookingUser(userid='', dates=[])
     
+    def deleteBooking(self, request, context):
+        userid = request.userid
+        date = request.date
+        moviesid = request.moviesid  # Get movie ID from request
+        # Search for the user's booking
+        user_booking = next((booking for booking in self.db if booking["userid"] == userid), None)
+
+        if not user_booking:
+            return booking_pb2.DeleteBookingResponse(success=False, message="User booking not found")
+
+        # Find the user's dates
+        user_dates = user_booking["dates"]
+        
+        # Search for the date entry to delete
+        for date_entry in user_dates:
+            if date_entry["date"] == date:
+                # Check if the movie ID exists in the movies for this date
+                if moviesid in date_entry["movies"]:
+                    # Remove the movie ID from the date entry
+                    date_entry["movies"].remove(moviesid)
+
+                    # If no movies are left for this date, remove the date entry
+                    if not date_entry["movies"]:
+                        user_dates.remove(date_entry)
+
+                    # If no dates are left, remove the user booking entirely
+                    if not user_dates:
+                        self.db.remove(user_booking)
+
+                    # Write the updated bookings to the JSON file
+                    write_bookings(self.db)
+
+                    return booking_pb2.DeleteBookingResponse(success=True, message="Booking deleted successfully")
+                else:
+                    return booking_pb2.DeleteBookingResponse(success=False, message="Movie ID not found for the specified date")
+
+        return booking_pb2.DeleteBookingResponse(success=False, message="No booking found for the specified date")
+
     def addBookingByUserId(self, request, context):
         userid = request.userid
         bookingInfo = request.bookingInfo

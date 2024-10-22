@@ -46,6 +46,30 @@ def getUserSinceTime(timeSinceLastActivity):
     userArray = list(filter(lambda x: x['last_active'] > int(timeSinceLast), users))
     return make_response(jsonify(userArray), 200)
 
+@app.route("/users/<userId>/booking", methods=['DELETE'])
+def deleteBookingForUser(userId):
+    req = request.get_json()  # Get the JSON request body
+    date = req.get("date")
+    moviesid = req.get("moviesid")
+    print(date,moviesid)
+    if not date or not moviesid:
+        return make_response(jsonify({'error': 'Date and movieid parameters are required'}), 400)
+
+    with grpc.insecure_channel('localhost:3003') as channel:
+        stub = booking_pb2_grpc.BookingStub(channel)
+        # Create the gRPC request message
+        delete_request = booking_pb2.DeleteBookingRequest(userid=userId, date=date, moviesid=moviesid)
+        try:
+            delete_response = stub.deleteBooking(delete_request)
+            if delete_response.success:
+                return make_response(jsonify({'message': delete_response.message}), 200)
+            else:
+                return make_response(jsonify({'error': delete_response.message}), 400)
+        except grpc.RpcError as e:
+            return make_response(jsonify({'error': e.details()}), e.code().value[0])
+
+# Main entry point of the
+
 # Endpoint to create a booking for a user using gRPC
 @app.route("/users/<userId>/booking", methods=['POST'])
 def createBookingForUser(userId):
