@@ -41,14 +41,14 @@ def getUserInfoById(user_Id):
         return make_response(jsonify({'error': 'User not found'}), 400)
 
 # Endpoint to get users based on the time since their last activity
-@app.route("/users/timeSinceLastActivity", methods=['GET'])
+@app.route("/users/<timeSinceLastActivity>", methods=['GET'])
 def getUserSinceTime(timeSinceLastActivity):
     if timeSinceLastActivity is None:
         # If the required parameter is not provided, return an error
         return make_response(jsonify({"error": "timeSinceLastActivity parameter is required"}), 400)
 
     # Filter users who were active after a certain time
-    userArray = list(filter(lambda x: x['last_active'] > int(timeSinceLast), users))
+    userArray = list(filter(lambda x: x['last_active'] > int(timeSinceLastActivity), users))
     return make_response(jsonify(userArray), 200)
 
 @app.route("/users/<userId>/booking", methods=['DELETE'])
