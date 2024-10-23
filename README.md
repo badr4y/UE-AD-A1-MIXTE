@@ -63,7 +63,7 @@ To run the services, you will use `pymon`, a Python monitoring tool that helps t
 
 2. pymon movie.py
 3. pymon user.py
-4  pymon booking.py
-5  pymon showtime.py
+4.  pymon booking.py
+5.  pymon showtime.py
 
 
