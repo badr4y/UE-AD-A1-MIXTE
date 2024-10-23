@@ -29,7 +29,7 @@ The **Movie** service provides a GraphQL API. It is responsible for managing mov
     director
     releaseDate
   }
-}
+}```
 ### 2. Booking Service (gRPC)
 
 The **Booking** service provides a gRPC API that manages booking information. It interacts with the **Times** service via gRPC for time slot data.
